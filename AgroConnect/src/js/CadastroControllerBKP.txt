@@ -1,0 +1,69 @@
+using AgroConnect.Models;
+using System;
+using System.Data.SqlClient;
+using System.Threading.Tasks;
+using System.Web.Mvc;
+using System.Web.Security;
+
+namespace AgroConnect.Controllers
+{
+    public class CadastroController : Controller
+    {
+        private readonly string _connectionString = "Server=localhost;Database=BD_AgroConnect;Integrated Security=True;"; // Atualize conforme necessário
+
+        // Exibe o formulário de cadastro
+        public ActionResult Index()
+        {
+            return View(new CadastroModel());
+        }
+
+        // Ação POST para processar o cadastro
+        [HttpPost]
+        public async Task<ActionResult> Cadastrar(CadastroModel model)
+        {
+
+            if (ModelState.IsValid)
+            {
+                // Criar o objeto de cadastro
+                var cadastroModel = new CadastroModel(_connectionString)
+                {
+                    Nome = model.Nome,
+                    Email = model.Email,
+                    Telefone = model.Telefone,
+                    Endereco = model.Endereco,
+                    Numero = model.Numero,
+                    Cep = model.Cep,
+                    Senha = model.Senha
+                };
+
+
+                try
+                {
+
+                    var isCreateUser = await cadastroModel.SalvarCadastroAsync();
+
+                    if (isCreateUser)
+                    {
+
+                        TempData["SuccessMessage"] = "Cadastro realizado com sucesso!";
+                        return RedirectToAction("Index", "Login");
+                    }
+
+                    // Se houver erro de autenticação
+                    TempData["ErrorMessage"] = "Erro ao cadastrar o usuário.";
+
+                }
+                catch (Exception)
+                {
+                    
+                    TempData["ErrorMessage"] = "Ocorreu um erro ao processar sua solicitação. Tente novamente.";
+                }
+            }
+
+            // Retorna a View com o modelo, caso haja erros de validação
+            return View("Index", model);
+        }
+
+
+    }
+}

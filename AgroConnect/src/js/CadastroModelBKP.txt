@@ -1,0 +1,104 @@
+using System;
+using System.ComponentModel.DataAnnotations;
+using System.Data;
+using System.Data.SqlClient;
+using System.Threading.Tasks;
+
+namespace AgroConnect.Models
+{
+    public class CadastroModel
+    {
+        
+        public string Nome { get; set; }
+
+        
+        public string Email { get; set; }
+
+        
+        public string Telefone { get; set; }
+
+        
+        public string Endereco { get; set; }
+
+        
+        public string Numero { get; set; }
+
+        
+        public string Cep { get; set; }
+
+        
+        [DataType(DataType.Password)]
+        public string Senha { get; set; }
+
+       
+        [DataType(DataType.Password)]
+        public string ConfirmarSenha { get; set; }
+
+        private readonly string _connectionString;
+
+        public CadastroModel() { }
+
+        public CadastroModel(string connectionString)
+        {
+            _connectionString = connectionString;
+        }
+
+        public async Task<bool> SalvarCadastroAsync()
+        {
+            try
+            {
+                using (var connection = new SqlConnection(_connectionString))
+                    {
+                        await connection.OpenAsync();
+
+
+                        // Inserir na tabela Usuario
+                        var usuarioCommand = new SqlCommand(@"
+                        INSERT INTO Usuario (nome, email, telefone, endereco, numero, cep, senha, data_cadastro)
+                        OUTPUT INSERTED.Id
+                        VALUES (@Nome, @Email, @Telefone, @Endereco, @Numero, @Cep, @Senha, @DataCadastro);
+                        ", connection);
+
+                        usuarioCommand.Parameters.AddWithValue("@Nome", Nome);
+                        usuarioCommand.Parameters.AddWithValue("@Email", Email);
+                        usuarioCommand.Parameters.AddWithValue("@Telefone", Telefone);
+                        usuarioCommand.Parameters.AddWithValue("@Endereco", Endereco);
+                        usuarioCommand.Parameters.AddWithValue("@Numero", Numero);
+                        usuarioCommand.Parameters.AddWithValue("@Cep", Cep);
+                        usuarioCommand.Parameters.AddWithValue("@Senha", Senha);
+                        usuarioCommand.Parameters.Add("@DataCadastro", SqlDbType.DateTime).Value = DateTime.Now;
+
+                        var usuarioId = (int)await usuarioCommand.ExecuteScalarAsync();
+
+                        // Inserir na tabela Login
+                        var loginCommand = new SqlCommand(@"
+                        INSERT INTO Login (email_or_telefone, senha, usuario_id)
+                        VALUES (@EmailOrTelefone, @Senha, @UsuarioId);
+                        ", connection);
+
+                        loginCommand.Parameters.AddWithValue("@EmailOrTelefone", Email);
+                        loginCommand.Parameters.AddWithValue("@Senha", Senha);
+                        loginCommand.Parameters.AddWithValue("@UsuarioId", usuarioId);
+
+                        await loginCommand.ExecuteNonQueryAsync();
+
+                        return true;
+                    }
+                }
+                catch (SqlException sqlEx)
+                {
+                    throw new Exception("Erro de banco de dados ao validar usuário", sqlEx);
+                }
+                catch (Exception ex)
+                {
+                    // Logar outras exceções
+                    throw new Exception("Erro ao cadastrar usuário", ex);
+                }
+
+            }
+            
+        }
+    }
+
+    
+
